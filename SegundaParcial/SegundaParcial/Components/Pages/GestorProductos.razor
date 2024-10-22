@@ -1,0 +1,158 @@
+﻿<h3>GestorProductos</h3>
+@page "/gestorproductos"
+
+@rendermode InteractiveServer
+@using SegundaParcial.Modelos
+
+
+<h3>Gestión de Productos</h3>
+
+<EditForm Model="@producto" OnValidSubmit="@GuardarProducto">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Número de inventario:</label>
+        <InputNumber @bind-Value="producto.NumeroInventario" />
+        <ValidationMessage For="@(() => producto.NumeroInventario)" />
+    </div>
+
+    <div>
+        <label>Nombre:</label>
+        <InputText @bind-Value="producto.Nombre" />
+        <ValidationMessage For="@(() => producto.Nombre)" />
+    </div>
+
+    <div>
+        <label>Departamento:</label>
+        <select @bind="producto.Departamento">
+            <option value="">Seleccione</option>
+            <option value="Frutas">Frutas</option>
+            <option value="Verduras">Verduras</option>
+            <option value="Lácteos">Lácteos</option>
+        </select>
+        <ValidationMessage For="@(() => producto.Departamento)" />
+    </div>
+
+    <div>
+        <button type="submit">Guardar</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div style="color:red;">@mensajeError</div>
+    }
+</EditForm>
+
+<h3>Listado de Productos</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Número de Inventario</th>
+            <th>Nombre</th>
+            <th>Departamento</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in productos)
+        {
+            <tr>
+                <td>@item.NumeroInventario</td>
+                <td>@item.Nombre</td>
+                <td>@item.Departamento</td>
+                <td>
+                    <button @onclick="() => EditarProducto(item)">Editar</button>
+                    <button @onclick="() => EliminarProducto(item.NumeroInventario)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<button @onclick="MostrarInventario">Existencias</button>
+<button @onclick="MostrarListado">Listado</button>
+
+@if (mostrarInventario)
+{
+    <h3>Concentrado de Existencias</h3>
+    @foreach (var departamento in productosAgrupados)
+    {
+        <p>@departamento.Key: @departamento.Count() productos</p>
+    }
+}
+
+
+
+
+@code {
+    private Producto producto = new Producto();
+    private List<Producto> productos = new List<Producto>();
+    private string mensajeError;
+    private bool mostrarInventario = false;
+    private IEnumerable<IGrouping<string, Producto>> productosAgrupados;
+
+    private async Task GuardarProducto()
+    {
+        mensajeError = string.Empty;
+
+
+        if (producto.NumeroInventario <= 0)
+        {
+            mensajeError = "El número de inventario debe ser un número entero positivo.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(producto.Nombre) || producto.Nombre.Length > 200)
+        {
+            mensajeError = "El nombre del producto no puede estar vacío y debe tener un máximo de 200 caracteres.";
+            return;
+        }
+        if (producto.Departamento == null)
+        {
+            mensajeError = "El departamento debe ser Frutas, Verduras o Lácteos.";
+            return;
+        }
+        if (productos.Any(p => p.NumeroInventario == producto.NumeroInventario))
+        {
+            mensajeError = "El número de inventario ya está registrado.";
+            return;
+        }
+
+        productos.Add(new Producto
+            {
+                NumeroInventario = producto.NumeroInventario,
+                Nombre = producto.Nombre,
+                Departamento = producto.Departamento
+            });
+
+        producto = new Producto();
+        await Task.CompletedTask;
+    }
+
+    private void EliminarProducto(int numeroInventario)
+    {
+        var productoAEliminar = productos.FirstOrDefault(p => p.NumeroInventario == numeroInventario);
+        if (productoAEliminar != null)
+        {
+            productos.Remove(productoAEliminar);
+        }
+    }
+
+    private void EditarProducto(Producto productoAEditar)
+    {
+        producto = productoAEditar;
+    }
+
+    private void MostrarInventario()
+    {
+        productosAgrupados = productos.GroupBy(p => p.Departamento);
+        mostrarInventario = true;
+    }
+
+    private void MostrarListado()
+    {
+        mostrarInventario = false;
+    }
+}
+
+
